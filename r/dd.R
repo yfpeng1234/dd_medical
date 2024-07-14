@@ -6,10 +6,10 @@ library(ggplot2)
 num_variable<-20
 slices<-2
 dd_sample<-10
-epoch<-40
+epoch<-160
 grad_add_num<-10
 sigma<-0.1
-lr<-0.00002
+lr<-0.00004
 seed<-44
 
 #set seed for reproduction

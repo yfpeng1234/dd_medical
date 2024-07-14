@@ -2,6 +2,24 @@
 ### source : https://github.com/cbg-ethz/DBNclass + modifications 
 #############################################################################
 
+############################################################################
+###This script is used for generating training and testing data
+###to be more specific:
+###1. Generate a random Gaussian DBN with 20 nodes and 2 slices (where 20 and 2 can be any other values)
+###source nodes are Gaussian, N(0,0.5), while others are linear Gaussian N(f(parent_nodes),0.5),f(parent_nodes) is linear combination
+###
+###2. sampler 1000 observations respectively for training and testing set
+###
+###3. testing set is unchanged(do not add noise and hide variables)
+###
+###4. training set is fristly seperated to 5 partitions, each with 200 obervations
+###
+###5. each training partitions is added with Gaussian noise N(0,0.5), which can be controlled.
+###then randomly hide 10% varibales , which can also be controlled
+###
+###step1-3 are done in this script, step4,5 are done in python/process_data.py
+#############################################################################
+
 
 library(Matrix)
 library(data.table) 
@@ -24,16 +42,23 @@ DBNsimulation<-function(n, slices, nsamp=100) {
   wm<- DBN$wm
 
   #exporting weight matrix and adjacency matrix 
-  fwrite(adj, file.path(root,'data','GT.csv'))
-  fwrite(wm, file.path(root,'data','weight.csv'))
+  fwrite(adj, file.path(root,'data','adjacent_matrix.csv'))
+  fwrite(wm, file.path(root,'data','weight_matrix.csv'))
 
-  #simulate data 
-  simdata<-genDataDBN3(adj,wm,slices,ss=nsamp)
-  simdata$mcmc<-simdata$mcmc[1:nsamp,]
+  #simulate data
+  #generating original data for training and testing set
+  simdata_train<-genDataDBN3(adj,wm,slices,ss=nsamp)
+  simdata_train$mcmc<-simdata_train$mcmc[1:nsamp,]
+  simdata_test<-genDataDBN3(adj,wm,slices,ss=nsamp)
+  simdata_test$mcmc<-simdata_test$mcmc[1:nsamp,]
   
-  #exporting data file
-  data<- as.data.frame(as.matrix(simdata$mcmc))
-  write.csv(data, file.path(root,'data','original_data.csv'))
+  #exporting original data
+  data_train<- as.data.frame(as.matrix(simdata_train$mcmc))
+  colnames(data_train)<-c(paste0("X", 1:n, "_t_1"), paste0("X", 1:n, "_t_0"))
+  write.csv(data_train, file.path(root,'data','original_train.csv'),row.names = FALSE)
+  data_test<- as.data.frame(as.matrix(simdata_test$mcmc))
+  colnames(data_test)<-c(paste0("X", 1:n, "_t_1"), paste0("X", 1:n, "_t_0"))
+  write.csv(data_test, file.path(root,'data','original_test.csv'),row.names = FALSE)
   
 }
 

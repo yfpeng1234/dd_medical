@@ -2,19 +2,11 @@ import pandas as pd
 import numpy as np
 import os
 
-def rename_columns(data, num_features_per_time_slice=200, num_time_slices=2):
-    
-        new_columns = []
-        for j in range(num_time_slices):
-            new_columns.extend([f"X{k+1}_t_{num_time_slices-1-j}"  for k in range(num_features_per_time_slice)])
-        
-        # check that the length of new columns matches the number of DataFrame columns
-        if len(new_columns) == data.shape[1]:
-            data.columns = new_columns
-        else:
-            raise ValueError("The number of new column names does not match the number of columns in the DataFrame.")
-        
-        return data
+n=20
+slices=2
+partitions=5
+num_hide=4
+noise_scale=0.1
 
 def split(num_partitions=5,data=None):
     total_sample=data.shape[0]
@@ -37,7 +29,7 @@ def add_noise_per_time_slice(data_list, num_features_per_time_slice=200, num_tim
             one_slice = df.iloc[:, start_col:end_col]
             
             #generating the noise for every time slice 
-            noise_cont = np.random.normal(loc=0, scale=0.1, size=one_slice.shape[0])
+            noise_cont = np.random.normal(loc=0, scale=noise_scale, size=one_slice.shape[0])
             
             for col in one_slice.columns[:]:  # ignoring the static variables
                 df.iloc[:, start_col + one_slice.columns.get_loc(col)] += noise_cont
@@ -74,22 +66,12 @@ def save(data_list):
         if os.path.isdir("./../data/seperated_data") == False:
             os.mkdir("./../data/seperated_data")
         path = "./../data/seperated_data/partition_" + str(i) + ".csv"
-        new.to_csv(path)
-
-n=20
-slices=2
-partitions=5
-num_hide=2
+        new.to_csv(path, index=False)
 
 # reading data 
-data_R_dbn = pd.read_csv("./../data/original_data.csv")
-data_R_dbn = data_R_dbn.iloc[:,1:]
-
-#rename the dataset to get the dbnR format
-renamed_data= rename_columns(data_R_dbn,n,slices)
-
+data_R_dbn = pd.read_csv("./../data/original_train.csv")
 #split the data into 5 partitions to simulate multiple data sources
-L=split(partitions,renamed_data)
+L=split(partitions,data_R_dbn)
 
 #add noise to the data
 L_withnoise=add_noise_per_time_slice(L,n,slices)

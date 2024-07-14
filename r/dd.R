@@ -1,14 +1,15 @@
 library(dbnR)
 library(here)
 library(data.table)
+library(ggplot2)
 
 num_variable<-20
 slices<-2
 dd_sample<-10
 epoch<-40
 grad_add_num<-10
-sigma<-1
-lr<-0.001
+sigma<-0.1
+lr<-0.00002
 seed<-44
 
 #set seed for reproduction
@@ -77,6 +78,9 @@ test<-function(synthetic_data){
 }
 
 DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
+  #save the test result each epoch
+  LL<-c()
+
   #initialize our distilled data
   dd_data<-init_data()
   
@@ -103,7 +107,17 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
     #update the synthetic data
     step_size<-lr
     dd_data<-dd_data-step_size*grad
+
+    #test
+    epoch_score<-test(dd_data)
+    LL<-c(LL,epoch_score)
   }
+
+  #plot the test result
+  idx<-1:epochs
+  plot_data<-data.frame(epoch_idx=idx,LL_test=LL)
+  ggplot(plot_data,aes(x=epoch_idx,y=LL_test))+geom_line()+xlab('Epoch')+ylab('Log-likelihood of test data')+ggtitle('Test result of distilled data')
+  ggsave(file.path(here(),'result',paste('LL_on_test_set_epoch_',epochs,'_grad_add_num_',grad_add_num,'_sigma_',sigma,'_lr_',lr,'.png')),width=6,height=4)
   
   #save the synthetic data
   write.csv(dd_data,file=file.path(here(),'data','dd_data.csv'),row.names = FALSE)

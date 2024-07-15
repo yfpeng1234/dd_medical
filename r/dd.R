@@ -2,6 +2,9 @@ library(dbnR)
 library(here)
 library(data.table)
 library(ggplot2)
+library(tictoc)
+
+tic()
 
 num_variable<-20
 slices<-2
@@ -124,3 +127,5 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
 }
 
 DD(epochs = epoch,grad_add_num = grad_add_num,sigma=sigma,lr=lr)
+
+toc()

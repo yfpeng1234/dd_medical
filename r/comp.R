@@ -5,6 +5,10 @@ library(data.table)
 #testing our optimized synthetic data
 #first learn a DBN from it
 #then compute the log-likelihood of test data
+
+num_variable<-20
+slices<-2
+
 test<-function(synthetic_data){
   test_set<-read.csv(file.path(here(),'data','original_test.csv'))
 

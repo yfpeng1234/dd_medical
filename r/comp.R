@@ -45,9 +45,14 @@ synthetic_data<-read.csv(file.path(here(),'data','dd_data.csv'))
 score4<-test(synthetic_data)
 print(paste('synthetic data:final log-likelihood(bigger->better):',score4))
 
+#mads
+mad_optimized_data<-read.csv(file.path(here(),'data','mads_optimized_dd_data.csv'))
+score5<-test(mad_optimized_data)
+print(paste('mads optimized data:final log-likelihood(bigger->better):',score5))
+
 #random noise
 synthetic_data<-matrix(rnorm(10*40), nrow = 10, ncol = 40)
 synthetic_data<-as.data.frame(synthetic_data)
 colnames(synthetic_data)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
-score5<-test(synthetic_data)
-print(paste('random noise:final log-likelihood(bigger->better):',score5))
+score6<-test(synthetic_data)
+print(paste('random noise:final log-likelihood(bigger->better):',score6))

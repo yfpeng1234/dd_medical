@@ -12,7 +12,7 @@ dd_sample<-10
 epoch<-160
 grad_add_num<-10
 sigma<-0.1
-lr<-0.00004
+lr<-4e-5
 seed<-44
 
 #set seed for reproduction

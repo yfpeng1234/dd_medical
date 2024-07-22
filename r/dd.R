@@ -14,6 +14,7 @@ grad_add_num<-10
 sigma<-0.1
 lr<-4e-5
 seed<-44
+init_method<-'real'
 
 #set seed for reproduction
 set.seed(seed)
@@ -36,9 +37,21 @@ get_dataset<-function(){
 }
 
 init_data<-function(){
-  random_matrix <- matrix(rnorm(dd_sample * num_variable*slices), nrow = dd_sample, ncol = num_variable*slices)
-  random_df <- as.data.frame(random_matrix)
-  colnames(random_df) <- c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
+  if (init_method=='random'){
+    random_matrix <- matrix(rnorm(dd_sample * num_variable*slices), nrow = dd_sample, ncol = num_variable*slices)
+    random_df <- as.data.frame(random_matrix)
+    colnames(random_df) <- c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
+  }
+  else if (init_method=='real'){
+    random_df<-read.csv(file.path(here(),'data','seperated_data','partition_0.csv'))
+    random_df<-random_df[1:dd_sample,]
+    na_columns <- colnames(random_df)[apply(random_df, 2, function(col) all(is.na(col)))]
+    na_columns_num<-length(na_columns)
+    random_matrix <- matrix(rnorm(dd_sample * na_columns_num), nrow = dd_sample, ncol = na_columns_num)
+    substitute_df<-as.data.frame(random_matrix)
+    colnames(substitute_df)<-na_columns
+    random_df[na_columns]<-substitute_df
+  }
   return(random_df)
 }
 
@@ -120,7 +133,7 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
   idx<-1:epochs
   plot_data<-data.frame(epoch_idx=idx,LL_test=LL)
   ggplot(plot_data,aes(x=epoch_idx,y=LL_test))+geom_line()+xlab('Epoch')+ylab('Log-likelihood of test data')+ggtitle('Test result of distilled data')
-  ggsave(file.path(here(),'result',paste('LL_on_test_set_epoch_',epochs,'_grad_add_num_',grad_add_num,'_sigma_',sigma,'_lr_',lr,'.png')),width=6,height=4)
+  ggsave(file.path(here(),'result',paste('LL_on_test_set_epoch_',epochs,'_grad_add_num_',grad_add_num,'_sigma_',sigma,'_lr_',lr,'_init_',init_method,'.png')),width=6,height=4)
   
   #save the synthetic data
   write.csv(dd_data,file=file.path(here(),'data','dd_data.csv'),row.names = FALSE)

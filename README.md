@@ -6,3 +6,11 @@
 ## note
 1. **I guess cosine learning rate scheduler might be helpful. Intuitively, the optimization process should be periodically, first learning a better DBN structure, then learn a better parameter. We should use larger lr for the first period, smaller lr for the second period.**
 2. **Currently lr=4e-5, sigma=0.1 is the best hyper parameter I found.**
+## Hyper-parameter
+|   synthetic data num   | learning rate   | sigma   |
+|:------:|:------:|:------:|
+| 10  | 4e-5 | 1e-1 |
+| 100  | 1e-4 | 8e-2 |
+
+
+

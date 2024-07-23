@@ -15,6 +15,7 @@ sigma<-0.1
 lr<-4e-5
 seed<-44
 init_method<-'real'
+optimizer<-'sgd'
 
 #set seed for reproduction
 set.seed(seed)
@@ -110,6 +111,7 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
     
     #compute the gradient by zero order approximation
     grad<-matrix(0, nrow = dd_sample, ncol = (num_variable*slices))
+    final_grad<-copy(grad)
     score0<-eval_score(dd_data,choose_set)
     print(paste('epoch:',i,'  choose data source:',choose_idx,'  loss:',score0))
     for (j in 1:grad_add_num){
@@ -119,10 +121,16 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
       grad<-grad+random_perturb*(score1-score0)/sigma
     }
     grad<-grad/grad_add_num
+    final_grad<-0.9*final_grad+grad
     
     #update the synthetic data
     step_size<-lr
-    dd_data<-dd_data-step_size*grad
+    if (optimizer=='sgd'){
+      dd_data<-dd_data-step_size*grad
+    }
+    else if (optimizer=='momentum'){
+      dd_data<-dd_data-step_size*final_grad
+    }
 
     #test
     epoch_score<-test(dd_data)
@@ -133,7 +141,7 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
   idx<-1:epochs
   plot_data<-data.frame(epoch_idx=idx,LL_test=LL)
   ggplot(plot_data,aes(x=epoch_idx,y=LL_test))+geom_line()+xlab('Epoch')+ylab('Log-likelihood of test data')+ggtitle('Test result of distilled data')
-  ggsave(file.path(here(),'result',paste('LL_on_test_set_epoch_',epochs,'_grad_add_num_',grad_add_num,'_sigma_',sigma,'_lr_',lr,'_init_',init_method,'.png')),width=6,height=4)
+  ggsave(file.path(here(),'result',paste('LL_on_test_set_epoch_',epochs,'_grad_add_num_',grad_add_num,'_sigma_',sigma,'_lr_',lr,'_dd_num_',dd_sample,'_init_',init_method,'.png')),width=6,height=4)
   
   #save the synthetic data
   write.csv(dd_data,file=file.path(here(),'data','dd_data.csv'),row.names = FALSE)

@@ -56,3 +56,22 @@ synthetic_data<-as.data.frame(synthetic_data)
 colnames(synthetic_data)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
 score6<-test(synthetic_data)
 print(paste('random noise:final log-likelihood(bigger->better):',score6))
+
+#original data with noise , no hidden variables (100)
+synthetic_data<-read.csv(file.path(here(),'data','original_train.csv'))
+synthetic_data<-synthetic_data[1:100,]
+synthetic_data<-synthetic_data+matrix(rnorm(100*40), nrow = 100, ncol = 40)*0.1
+score7<-test(synthetic_data)
+print(paste('original data with noise:final log-likelihood(bigger->better):',score7))
+
+#subset of original data with noise , no hidden variables (20)
+synthetic_data<-read.csv(file.path(here(),'data','original_train.csv'))
+synthetic_data<-synthetic_data[1:20,]
+score8<-test(synthetic_data)
+print(paste('original subset(20) training set:final log-likelihood(bigger->better):',score8))
+
+#subset of original data with noise , no hidden variables (50)
+synthetic_data<-read.csv(file.path(here(),'data','original_train.csv'))
+synthetic_data<-synthetic_data[1:50,]
+score9<-test(synthetic_data)
+print(paste('original subset(50) training set:final log-likelihood(bigger->better):',score9))

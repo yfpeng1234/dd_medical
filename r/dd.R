@@ -16,14 +16,14 @@ tic()
 
 num_variable<-20
 slices<-2
-dd_sample<-20
-epoch<-400
+dd_sample<-100
+epoch<-8000
 grad_add_num<-10
-sigma<-1e-1
-lr<-4e-5
+sigma<-8e-2
+lr<-4e-4
 seed<-44
 partitions<-5
-init_method<-'random'
+init_method<-'real'
 optimizer<-'sgd'
 #could be all, mini-batch,partial
 #all -> optimize all the entry at the same time

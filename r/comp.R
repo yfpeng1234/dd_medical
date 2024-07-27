@@ -34,6 +34,20 @@ original_data<-original_data[1:100,]
 score2<-test(original_data)
 print(paste('original subset(100) training set:final log-likelihood(bigger->better):',score2))
 
+
+#subset of original training set (50)
+original_data<-read.csv(file.path(here(),'data','original_train.csv'))
+original_data<-original_data[1:50,]
+score3<-test(original_data)
+print(paste('original subset(50) training set:final log-likelihood(bigger->better):',score3))
+
+#subset of original training set (20)
+original_data<-read.csv(file.path(here(),'data','original_train.csv'))
+original_data<-original_data[1:20,]
+score3<-test(original_data)
+print(paste('original subset(20) training set:final log-likelihood(bigger->better):',score3))
+
+
 #subset of original training set (10)
 original_data<-read.csv(file.path(here(),'data','original_train.csv'))
 original_data<-original_data[1:10,]
@@ -75,3 +89,13 @@ synthetic_data<-read.csv(file.path(here(),'data','original_train.csv'))
 synthetic_data<-synthetic_data[1:50,]
 score9<-test(synthetic_data)
 print(paste('original subset(50) training set:final log-likelihood(bigger->better):',score9))
+
+#composed set, each with 10 synthetic data, add to 50 observations
+synthetic_data1<-read.csv(file.path(here(),'data','dd_data1.csv'))
+synthetic_data2<-read.csv(file.path(here(),'data','dd_data2.csv'))
+synthetic_data3<-read.csv(file.path(here(),'data','dd_data3.csv'))
+synthetic_data4<-read.csv(file.path(here(),'data','dd_data4.csv'))
+synthetic_data5<-read.csv(file.path(here(),'data','dd_data5.csv'))
+synthetic_data<-rbind(synthetic_data1,synthetic_data2,synthetic_data3,synthetic_data4,synthetic_data5)
+score10<-test(synthetic_data)
+print(paste('composed set:final log-likelihood(bigger->better):',score10))

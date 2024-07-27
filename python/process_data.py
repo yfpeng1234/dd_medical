@@ -5,7 +5,7 @@ import os
 n=20
 slices=2
 partitions=5
-num_hide=4
+num_hide=2
 noise_scale=0.1
 
 def split(num_partitions=5,data=None):

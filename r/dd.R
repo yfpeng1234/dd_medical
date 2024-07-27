@@ -16,12 +16,12 @@ tic()
 
 num_variable<-20
 slices<-2
-dd_sample<-100
-epoch<-8000
+dd_sample<-50
+epoch<-4000
 grad_add_num<-10
 sigma<-8e-2
-lr<-4e-4
-seed<-44
+lr<-4e-5
+seed<-88
 partitions<-5
 init_method<-'real'
 optimizer<-'sgd'
@@ -29,7 +29,7 @@ optimizer<-'sgd'
 #all -> optimize all the entry at the same time
 #mini-batch -> optimize one source of the synthetic data at a time, with real initialization
 #partial -> optimize only the hiden variables, with real initialization
-sampling<-'all'
+sampling<-'mini-batch'
 
 #set seed for reproduction
 set.seed(seed)
@@ -86,7 +86,7 @@ init_data<-function(){
       }
     }
     else if (sampling=='all'){
-      random_df<-read.csv(file.path(here(),'data','seperated_data','partition_0.csv'))
+      random_df<-read.csv(file.path(here(),'data','seperated_data','partition_3.csv'))
       random_df<-random_df[1:dd_sample,]
       na_columns <- colnames(random_df)[apply(random_df, 2, function(col) all(is.na(col)))]
       na_columns_num<-length(na_columns)
@@ -102,6 +102,26 @@ init_data<-function(){
     else if (sampling=='stage'){
       random_df<-read.csv(file.path(here(),'data','seperated_data','partition_0.csv'))
       random_df<-random_df[1:dd_sample,]
+    }
+    else if (sampling=='progressive'){
+      random_df<-read.csv(file.path(here(),'data','seperated_data','partition_3.csv'))
+      random_df<-random_df[1:dd_sample,]
+      na_columns <- colnames(random_df)[apply(random_df, 2, function(col) all(is.na(col)))]
+      na_columns_num<-length(na_columns)
+      random_matrix <- matrix(rnorm(dd_sample * na_columns_num), nrow = dd_sample, ncol = na_columns_num)
+      substitute_df<-as.data.frame(random_matrix)
+      colnames(substitute_df)<-na_columns
+      random_df[na_columns]<-substitute_df
+    }
+    else if (sampling=='progressive1'){
+      random_df<-read.csv(file.path(here(),'data','seperated_data','partition_3.csv'))
+      random_df<-random_df[1:dd_sample,]
+      na_columns <- colnames(random_df)[apply(random_df, 2, function(col) all(is.na(col)))]
+      na_columns_num<-length(na_columns)
+      random_matrix <- matrix(rnorm(dd_sample * na_columns_num), nrow = dd_sample, ncol = na_columns_num)
+      substitute_df<-as.data.frame(random_matrix)
+      colnames(substitute_df)<-na_columns
+      random_df[na_columns]<-substitute_df
     }
   }
   else if (init_method=='origin'){
@@ -160,7 +180,7 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
   train_set<-get_dataset()
   num_train_set<-length(train_set)
   
-  if (sampling=='mini-batch'){
+  if (sampling=='mini-batch' && init_method=='random'){
     num_per_batch<-dd_sample/partitions
     for (i in 1:epochs){
       #test
@@ -323,16 +343,139 @@ DD<-function(epochs=100,grad_add_num=10,sigma=0.5,lr=0.1){
       }
     }
   }
+  else if (sampling=='mini-batch' && init_method=='real'){
+    for (i in 1:epochs){
+      #test
+      epoch_score<-test(dd_data)
+      LL<-c(LL,epoch_score)
+
+      choose_idx<-sample(1:num_train_set,1)
+      
+      #compute the gradient by zero order approximation
+      grad<-matrix(0, nrow = dd_sample/partitions, ncol = (num_variable*slices))
+      score0<-0
+      for (k in 1:num_train_set){
+        if (k==choose_idx){
+          score0<-score0
+        }
+        else{
+          score0<-score0+eval_score(dd_data,train_set[[k]])
+        }
+      }
+      print(paste('epoch:',i,'  LL of test data(bigger->better):',epoch_score))
+      start_idx<-dd_sample/partitions*(choose_idx-1)+1
+      end_idx<-dd_sample/partitions*choose_idx
+      for (j in 1:grad_add_num){
+        random_perturb<-matrix(rnorm(dd_sample * num_variable*slices/partitions), nrow = dd_sample/partitions, ncol = num_variable*slices)
+        perturbed_train_set<-dd_data
+        perturbed_train_set[start_idx:end_idx,]<-perturbed_train_set[start_idx:end_idx,]+random_perturb*sigma
+        score1<-0
+        for (k in 1:num_train_set){
+          if (k==choose_idx){
+            score1<-score1
+          }
+          else{
+            score1<-score1+eval_score(perturbed_train_set,train_set[[k]])
+          }
+        }
+        grad<-grad+random_perturb*(score1-score0)/sigma
+      }
+      grad<-grad/grad_add_num
+      
+      #update the synthetic data
+      step_size<-lr
+      dd_data[start_idx:end_idx,]<-dd_data[start_idx:end_idx,]-step_size*grad
+    }
+  }
+  else if (sampling=='progressive'){
+    for (i in 1:epochs){
+      #decide the stage of dd
+      stage<-ceiling(i/(epochs/partitions))-1
+      start_idx<-stage*dd_sample/partitions+1
+      end_idx<-(stage+1)*dd_sample/partitions
+
+      #test
+      epoch_score<-test(dd_data[1:end_idx,])
+      LL<-c(LL,epoch_score)
+
+      choose_idx<-sample(1:num_train_set,1)
+      choose_set<-train_set[[choose_idx]]
+      
+      #compute the gradient by zero order approximation
+      grad<-matrix(0, nrow = dd_sample/partitions, ncol = (num_variable*slices))
+      final_grad<-copy(grad)
+      score0<-eval_score(dd_data[1:end_idx,],choose_set)
+      print(paste('epoch:',i,'  LL of test data(bigger->better):',epoch_score))
+      for (j in 1:grad_add_num){
+        random_perturb<-matrix(rnorm(dd_sample * num_variable*slices/partitions), nrow = dd_sample/partitions, ncol = num_variable*slices)
+        perturbed_train_set<-dd_data
+        perturbed_train_set[start_idx:end_idx,]<-perturbed_train_set[start_idx:end_idx,]+random_perturb*sigma
+        score1<-eval_score(perturbed_train_set[1:end_idx,],choose_set)
+        grad<-grad+random_perturb*(score1-score0)/sigma
+      }
+      grad<-grad/grad_add_num
+      final_grad<-0.9*final_grad+grad
+      
+      #update the synthetic data
+      step_size<-lr
+      if (optimizer=='sgd'){
+        dd_data[start_idx:end_idx,]<-dd_data[start_idx:end_idx,]-step_size*grad
+      }
+      else if (optimizer=='momentum'){
+        dd_data<-dd_data-step_size*final_grad
+      }
+    }
+  }
+  else if (sampling=='progressive1'){
+    for (i in 1:epochs){
+      #decide the stage of dd
+      stage<-ceiling(i/(epochs/partitions))-1
+      start_idx<-stage*dd_sample/partitions+1
+      end_idx<-(stage+1)*dd_sample/partitions
+
+      #test
+      epoch_score<-test(dd_data[1:end_idx,])
+      LL<-c(LL,epoch_score)
+
+      choose_idx<-sample(1:num_train_set,1)
+      choose_set<-train_set[[choose_idx]]
+      
+      #compute the gradient by zero order approximation
+      grad<-matrix(0, nrow = (stage+1)*dd_sample/partitions, ncol = (num_variable*slices))
+      final_grad<-copy(grad)
+      score0<-eval_score(dd_data[1:end_idx,],choose_set)
+      print(paste('epoch:',i,'  LL of test data(bigger->better):',epoch_score))
+      for (j in 1:grad_add_num){
+        random_perturb<-matrix(rnorm((stage+1)*dd_sample * num_variable*slices/partitions), nrow = (stage+1)*dd_sample/partitions, ncol = num_variable*slices)
+        perturbed_train_set<-dd_data
+        perturbed_train_set[1:end_idx,]<-perturbed_train_set[1:end_idx,]+random_perturb*sigma
+        score1<-eval_score(perturbed_train_set[1:end_idx,],choose_set)
+        grad<-grad+random_perturb*(score1-score0)/sigma
+      }
+      grad<-grad/grad_add_num
+      final_grad<-0.9*final_grad+grad
+      
+      #update the synthetic data
+      step_size<-lr
+      if (optimizer=='sgd'){
+        dd_data[1:end_idx,]<-dd_data[1:end_idx,]-step_size*grad
+      }
+      else if (optimizer=='momentum'){
+        dd_data<-dd_data-step_size*final_grad
+      }
+    }
+  }
   
 
   #plot the test result
   idx<-1:epochs
   plot_data<-data.frame(epoch_idx=idx,LL_test=LL)
+  write.csv(plot_data,file=file.path(here(),'plot',paste('LL_on_test_set_epoch_',epochs,'_grad_add_num_',grad_add_num,'_sigma_',sigma,'_lr_',lr,'_dd_num_',dd_sample,'_init_',init_method,'_sampling_',sampling,'.csv')),row.names = FALSE)
   ggplot(plot_data,aes(x=epoch_idx,y=LL_test))+geom_line()+xlab('Epoch')+ylab('Log-likelihood of test data')+ggtitle('Test result of distilled data')
   ggsave(file.path(here(),'result',paste('LL_on_test_set_epoch_',epochs,'_grad_add_num_',grad_add_num,'_sigma_',sigma,'_lr_',lr,'_dd_num_',dd_sample,'_init_',init_method,'_sampling_',sampling,'.png')),width=6,height=4)
   
   #save the synthetic data
-  write.csv(dd_data,file=file.path(here(),'data','dd_data.csv'),row.names = FALSE)
+  write.csv(dd_data,file=file.path(here(),'data','dd_data5.csv'),row.names = FALSE)
 }
 
 DD(epochs = epoch,grad_add_num = grad_add_num,sigma=sigma,lr=lr)

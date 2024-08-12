@@ -23,79 +23,99 @@ test<-function(synthetic_data){
   return(score)
 }
 
-#full original training set
-original_data<-read.csv(file.path(here(),'data','original_train.csv'))
-score1<-test(original_data)
-print(paste('original full training set:final log-likelihood(bigger->better):',score1))
+test1<-function(train_set){
+  test_set<-read.csv(file.path(here(),'data','original_test_10.csv'))
+  test_set<-test_set[,1:40]
+  colnames(test_set)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
 
-#subset of original training set (100)
-original_data<-read.csv(file.path(here(),'data','original_train.csv'))
-original_data<-original_data[1:100,]
-score2<-test(original_data)
-print(paste('original subset(100) training set:final log-likelihood(bigger->better):',score2))
+  #learn DBN
+  static_data<-copy(train_set[,1:(num_variable)])
+  colnames(static_data)<-c(paste0("X", 1:num_variable, "_t_0"))
+  net <- learn_dbn_struc(static_data, size=slices,f_dt=train_set)
+  fitted_net<- fit_dbn_params(net = net,train_set)
 
+  #use the learned DBN to compute the log-likelihood of test data
+  score<-logLik(fitted_net,test_set)
+  return(score)
+}
 
-#subset of original training set (50)
-original_data<-read.csv(file.path(here(),'data','original_train.csv'))
-original_data<-original_data[1:50,]
-score3<-test(original_data)
-print(paste('original subset(50) training set:final log-likelihood(bigger->better):',score3))
+test10<-function(dbn){
+  test_set<-read.csv(file.path(here(),'data','original_test_10.csv'))
 
-#subset of original training set (20)
-original_data<-read.csv(file.path(here(),'data','original_train.csv'))
-original_data<-original_data[1:20,]
-score3<-test(original_data)
-print(paste('original subset(20) training set:final log-likelihood(bigger->better):',score3))
+  #use the learned DBN to compute the log-likelihood of test data
+  #for first 2 slices
+  sub_test_set<-test_set[,1:(num_variable*slices)]
+  colnames(sub_test_set)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
+  score<-logLik(dbn,sub_test_set)
 
+  #for other time slices
+  node_to_consider<-colnames(sub_test_set)[(num_variable+1):(num_variable*slices)]
+  for (i in 1:(10-2)){
+    sub_test_set[,1:(num_variable*slices)]<-test_set[,(num_variable*i+1):(num_variable*i+num_variable*2)]
+    score<-score+logLik(dbn,sub_test_set,nodes=node_to_consider)
+  }
+  return(score)
+}
 
-#subset of original training set (10)
-original_data<-read.csv(file.path(here(),'data','original_train.csv'))
-original_data<-original_data[1:10,]
-score3<-test(original_data)
-print(paste('original subset(10) training set:final log-likelihood(bigger->better):',score3))
+concat_test<-function(ipc){
+  #concat
+  original_data<-read.csv(file.path(here(),'data','original_train_10.csv'))
+  original_data<-original_data[1:ipc,]
+  concat_data<-original_data[,1:40]
+  colnames(concat_data)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
+  for (i in 1:8){
+    add_data<-original_data[,((i*20+1):(i*20+40))]
+    colnames(add_data)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
+    concat_data<-rbind(concat_data,add_data)
+  }
+  score10<-test_10slices(concat_data)
+  return (score10)
+}
 
-#synthetic data
-synthetic_data<-read.csv(file.path(here(),'data','dd_data.csv'))
-score4<-test(synthetic_data)
-print(paste('synthetic data:final log-likelihood(bigger->better):',score4))
+test_10slices<-function(synthetic_data){
+  test_set<-read.csv(file.path(here(),'data','original_test_10.csv'))
 
-#mads
-mad_optimized_data<-read.csv(file.path(here(),'data','mads_optimized_dd_data.csv'))
-score5<-test(mad_optimized_data)
-print(paste('mads optimized data:final log-likelihood(bigger->better):',score5))
+  #learn DBN
+  static_data<-copy(synthetic_data[,1:(num_variable)])
+  colnames(static_data)<-c(paste0("X", 1:num_variable, "_t_0"))
+  net <- learn_dbn_struc(static_data, size=slices,f_dt=synthetic_data)
+  fitted_net<- fit_dbn_params(net = net,synthetic_data)
 
-#random noise
-synthetic_data<-matrix(rnorm(10*40), nrow = 10, ncol = 40)
-synthetic_data<-as.data.frame(synthetic_data)
-colnames(synthetic_data)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
-score6<-test(synthetic_data)
-print(paste('random noise:final log-likelihood(bigger->better):',score6))
+  #use the learned DBN to compute the log-likelihood of test data
+  
+  #for first 2 slices
+  sub_test_set<-test_set[,1:(num_variable*slices)]
+  colnames(sub_test_set)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
+  score<-logLik(fitted_net,sub_test_set)
 
-#original data with noise , no hidden variables (100)
-synthetic_data<-read.csv(file.path(here(),'data','original_train.csv'))
-synthetic_data<-synthetic_data[1:100,]
-synthetic_data<-synthetic_data+matrix(rnorm(100*40), nrow = 100, ncol = 40)*0.1
-score7<-test(synthetic_data)
-print(paste('original data with noise:final log-likelihood(bigger->better):',score7))
+  #for other time slices
+  node_to_consider<-colnames(sub_test_set)[(num_variable+1):(num_variable*slices)]
+  for (i in 1:(10-2)){
+    sub_test_set[,1:(num_variable*slices)]<-test_set[,(num_variable*i+1):(num_variable*i+num_variable*2)]
+    score<-score+logLik(fitted_net,sub_test_set,nodes=node_to_consider)
+  }
+  return(score)
+}
 
-#subset of original data with noise , no hidden variables (20)
-synthetic_data<-read.csv(file.path(here(),'data','original_train.csv'))
-synthetic_data<-synthetic_data[1:20,]
-score8<-test(synthetic_data)
-print(paste('original subset(20) training set:final log-likelihood(bigger->better):',score8))
+#use first 2 time slices
+original_data<-read.csv(file.path(here(),'data','original_train_10.csv'))
+original_data<-original_data[,1:40]
+colnames(original_data)<-c(paste0("X", 1:num_variable, "_t_1"), paste0("X", 1:num_variable, "_t_0"))
+score10<-test_10slices(original_data[1:10,])
+print(paste('use first 2 time slices:final log-likelihood(bigger->better) 10:',score10))
+score20<-test_10slices(original_data[1:20,])
+print(paste('use first 2 time slices:final log-likelihood(bigger->better) 20:',score20))
+score50<-test_10slices(original_data[1:50,])
+print(paste('use first 2 time slices:final log-likelihood(bigger->better) 50:',score50))
+score100<-test_10slices(original_data[1:100,])
+print(paste('use first 2 time slices:final log-likelihood(bigger->better) 100:',score100))
 
-#subset of original data with noise , no hidden variables (50)
-synthetic_data<-read.csv(file.path(here(),'data','original_train.csv'))
-synthetic_data<-synthetic_data[1:50,]
-score9<-test(synthetic_data)
-print(paste('original subset(50) training set:final log-likelihood(bigger->better):',score9))
-
-#composed set, each with 10 synthetic data, add to 50 observations
-synthetic_data1<-read.csv(file.path(here(),'data','dd_data1.csv'))
-synthetic_data2<-read.csv(file.path(here(),'data','dd_data2.csv'))
-synthetic_data3<-read.csv(file.path(here(),'data','dd_data3.csv'))
-synthetic_data4<-read.csv(file.path(here(),'data','dd_data4.csv'))
-synthetic_data5<-read.csv(file.path(here(),'data','dd_data5.csv'))
-synthetic_data<-rbind(synthetic_data1,synthetic_data2,synthetic_data3,synthetic_data4,synthetic_data5)
-score10<-test(synthetic_data)
-print(paste('composed set:final log-likelihood(bigger->better):',score10))
+#use all slices and concat to 2 slices
+score<-concat_test(1)
+print(paste('use all slices and concat to 2 slices:final log-likelihood(bigger->better) 10:',score))
+score<-concat_test(2)
+print(paste('use all slices and concat to 2 slices:final log-likelihood(bigger->better) 20:',score))
+score<-concat_test(5)
+print(paste('use all slices and concat to 2 slices:final log-likelihood(bigger->better) 50:',score))
+score<-concat_test(10)
+print(paste('use all slices and concat to 2 slices:final log-likelihood(bigger->better) 100:',score))

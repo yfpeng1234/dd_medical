@@ -1,8 +1,10 @@
 #we hope to dd for time series more than 2 time slices, with Marcovian order=1
 #for synthetic dataset, we still use 2 slices for simplisity, while for training data, there are 10 slices
 
+#you only need to change epochs for different IPC (dd_sample) settings
+#set epochs to 160,1000,4000,5500 for IPC=10,20,50,100 respectively
 #for 10 slices, we use 88 as seed, (4e-5)/(10/2) as lr, mini-batch as sampling
-#for 2 slices, we use 888 as seed, (4e-5)/(3/2) as lr, mini-batch1 as sampling, add "_" to save dir
+
 
 library(dbnR)
 library(here)

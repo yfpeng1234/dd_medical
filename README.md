@@ -29,6 +29,11 @@ Please refer to the comments in r/dd.R and r/dd_multi_slices.R
 # Boundary Generalizable PINN
 ## Running command
 ```bash
+git clone https://github.com/lululxvi/deepxde.git
+cp deepxde_add/baseline.py deepxde/
+cp deepxde_add/dfo.py deepxde/
+rm deepxde/deepxde/model.py
+cp deepxde_add/model.py deepxde/deepxde/
 cd deepxde
 python dfo.py
 ```

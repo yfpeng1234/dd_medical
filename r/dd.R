@@ -1,10 +1,5 @@
-#do we need moment to get out of sub-optimal no use
-#do we need mini batch to choose part of synthetic data to optimize?    useful
-#use real initialization is hard to optimize for dd_num=100
-#seems that smaller sigma is better 8e-2 is the best
-#what about only optimize hidden variables?
-#for partial, 4e-4 lr is the best
-#we can also try progressive dataset distillation, zero initialization for new data
+#you only need to change epochs for different IPC (dd_sample) settings
+#set epochs to 160,1000,4000,5500 for IPC=10,20,50,100 respectively
 
 library(dbnR)
 library(here)
